@@ -1,4 +1,4 @@
-# next-day-game# Criando o arquivo index.html em um formato simples para garantir a geração do arquivo para download
+ Criando o arquivo index.html em um formato simples para garantir a geração do arquivo para download
 html_content = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
