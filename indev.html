@@ -1,0 +1,942 @@
+﻿<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>NEXT DAY</title>
+    <style>
+        body {
+            background-color: #0d0d0d;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+            padding-top: 30px;
+            margin: 0;
+        }
+        #menu-principal {
+            border: 2px dashed #00ff00;
+            border-radius: 10px;
+            padding: 25px 20px;
+            max-width: 550px;
+            margin: 0 auto;
+            background-color: #050505;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.15);
+        }
+        #menu-principal h1 {
+            font-size: 36px;
+            letter-spacing: 4px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            text-shadow: 0 0 12px #00ff00;
+        }
+        #menu-principal p {
+            font-size: 13px;
+            color: #00cc00;
+            margin-bottom: 25px;
+        }
+        #tela-jogo {
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 25px;
+            max-width: 720px;
+            margin: 0 auto;
+            background-color: #080808;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.25);
+            text-align: left;
+        }
+        .status-bar {
+            font-size: 12px;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            color: #00cc00;
+            display: flex;
+            justify-content: space-between;
+        }
+        #inventario-bar {
+            font-size: 11px;
+            color: #ffaa00;
+            margin-bottom: 15px;
+            border-bottom: 1px dashed #00ff00;
+            padding-bottom: 5px;
+        }
+        pre#ascii-art {
+            font-family: monospace;
+            font-size: 10px;
+            line-height: 1.0;
+            white-space: pre;
+            color: #00ff00;
+            background-color: #030303;
+            padding: 12px;
+            border: 1px solid #00ff00;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 0 auto 20px auto;
+            display: none;
+            text-align: center;
+            text-shadow: 0 0 3px #00ff00;
+        }
+        #caixa-texto {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            text-shadow: 0 0 4px #00ff00;
+            white-space: pre-line;
+        }
+        #caixa-opcoes {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        button {
+            background-color: transparent;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            padding: 10px 18px;
+            font-size: 14px;
+            font-family: 'Courier New', Courier, monospace;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            width: 98%;
+            max-width: 650px;
+            text-align: left;
+        }
+        button::before {
+            content: "> ";
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #00ff00;
+            color: #0d0d0d;
+            box-shadow: 0 0 15px #00ff00;
+            font-weight: bold;
+        }
+        button:hover::before {
+            content: "[>] ";
+        }
+        .tela-error {
+            border-color: #ff0000 !important;
+            box-shadow: 0 0 25px rgba(255, 0, 0, 0.5) !important;
+            color: #ff0000 !important;
+        }
+        .tela-error pre#ascii-art {
+            color: #ff0000 !important;
+            border-color: #ff0000 !important;
+            text-shadow: 0 0 3px #ff0000 !important;
+        }
+        .tela-error button {
+            color: #ff0000 !important;
+            border-color: #ff0000 !important;
+        }
+        .tela-error button:hover {
+            background-color: #ff0000 !important;
+            color: #0d0d0d !important;
+            box-shadow: 0 0 15px #ff0000 !important;
+        }
+        .tela-error .status-bar {
+            border-color: #ff0000 !important;
+            color: #ff0000 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="menu-principal">
+        <h1>NEXT DAY</h1>
+        <p>-- SISTEMA DE SOBREVIVÊNCIA CAMPANHA EXPANDIDA --</p>
+        <button onclick="iniciarJogoComSom()">Iniciar Transmissão</button>
+    </div>
+
+    <div id="tela-jogo" style="display: none;">
+        <div class="status-bar" id="barra-status">
+            <span>[CONEXÃO: ESTÁVEL]</span>
+            <span id="capitulo-tag">NEXT DAY - CAPÍTULO 1</span>
+        </div>
+        <div id="inventario-bar">MOCHILA: Vazia</div>
+                
+        <pre id="ascii-art"></pre>
+        <div id="caixa-texto"></div>
+        <div id="caixa-opcoes"></div>
+    </div>
+
+    <script>
+        let audioCtx;
+        let inventario = [];
+        let estadoJogo = {};
+
+        // Arte ASCII do Encapuzado
+        const arteEncapuzado = 
+`                   .::..                    
+                 :-:----- -                 
+                :.::..:::-..                
+                .:      :...                
+                .        ...                
+               ..         ..                
+              ..            :               
+             .. .           :               
+             ..             ..              
+         ::.:..         .   ..::            
+      :-::... .          .  . .::--         
+   :::-...... .  .     . .  .... .::::      
+   ..:... ..   .        ..  ..........:     
+  ......... .  ..      ..   .. .......:..   
+.:........  .. . .      .   ... ....:: -:   
+ . . ..... ... . .          ... ....::      
+ .. .  ..... . ...          ... .:.:.. ..   
+.... .   . . . ..      .  ..... . ..  ..:   
+.:.  .     .  . ..   ..    .... ... .  :.:   
+...:.         .  ..  .   .......   .  .   .  `;
+
+        // Arte ASCII do Esquisito (Sem balão de fala)
+        const arteEsquisito = 
+`                    ..::---==---::..                
+                 :=#@@@@@@@@@@@@@@@@#=:             
+               -@@@@@@@@@@@@@@@@@@@@@@@@-           
+              =@@@@@@@@@@@@@@@@@@@@@@@@@@=          
+             :@@@@==#====@@@@@@@@@@====@@@:         
+             =@@@@@@@@#@==@@@@@@@@#=@#@@@@=         
+             =@@@@@@@@@@@@@@@@@@@@@@@@@@@@=         
+             =@@@@@@@@@@@@@@@@@@@@@@@@@@@@#         
+          .--=@@@@@@@@@@@@@@@@@@@@========--:       
+          -#@#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@-:=:    
+           #=#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@###=    
+           -#=@@@@@@@@@@@@@@@@@@@@@@@@@@@@@=:=#.    
+            ==@@@@@@@@@@@@@@@@@@@@@@@@@@@@@=:#-     
+             =#@@@@@@@@@@@@@@@@@@@@@@@@@@@@#=-      
+             .:@@@@@@@@@@@@@@@@@@@@@@@@@@@@-.       
+               =@@@@@@@@@@@@@@@@@@@@@@@@@@=         
+               .@@@@@@@@@@@@@@@@@@@@@@@@@=          
+                :#@@@@@@@@@@@@@@@@@@@@@@=.          
+                .=#@@@@@@#######@@@@@@@#-           
+                .=@##@@@@=======@@@@#@#=:           
+                .@@@@=#@@@@@@@@@@###@@#=.           
+                 #@=@@==##@@@@##==@@@@@:            
+                 :##=@@#######==#@##@@@             
+                   :-=@@#=##@@#@#==#@=:             `;
+
+        function mostrarDesconhecido() {
+            const ascii = document.getElementById("ascii-art");
+            ascii.textContent = arteEncapuzado;
+            ascii.style.display = "block";
+        }
+
+        function mostrarEsquisito() {
+            const ascii = document.getElementById("ascii-art");
+            ascii.textContent = arteEsquisito;
+            ascii.style.display = "block";
+        }
+
+        function esconderNPC() {
+            const ascii = document.getElementById("ascii-art");
+            ascii.style.display = "none";
+            ascii.textContent = "";
+        }
+
+        function adicionarItem(item) {
+            if (!inventario.includes(item)) {
+                inventario.push(item);
+                atualizarInventario();
+            }
+        }
+
+        function removerItem(item) {
+            inventario = inventario.filter(i => i !== item);
+            atualizarInventario();
+        }
+
+        function atualizarInventario() {
+            const bar = document.getElementById("inventario-bar");
+            if (inventario.length === 0) {
+                bar.innerText = "MOCHILA: Vazia";
+            } else {
+                bar.innerText = "MOCHILA: " + inventario.join(" | ");
+            }
+        }
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function tocarSomHover() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        function tocarSomClique() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.08);
+        }
+
+        function tocarSomErro() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.5);
+        }
+
+        function tocarSomVitoria() {
+            if (!audioCtx) return;
+            const notas = [523.25, 659.25, 783.99, 1046.50];
+            notas.forEach((freq, idx) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.1);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime + idx * 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.1 + 0.2);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(audioCtx.currentTime + idx * 0.1);
+                osc.stop(audioCtx.currentTime + idx * 0.1 + 0.2);
+            });
+        }
+
+        function atualizarTela(texto, opcoes) {
+            document.getElementById("caixa-texto").innerText = texto;
+            const caixaOpcoes = document.getElementById("caixa-opcoes");
+            caixaOpcoes.innerHTML = "";
+            
+            opcoes.forEach(opt => {
+                const btn = document.createElement("button");
+                btn.innerText = opt.texto;
+                btn.onmouseenter = tocarSomHover;
+                btn.onclick = () => {
+                    tocarSomClique();
+                    opt.funcao();
+                };
+                caixaOpcoes.appendChild(btn);
+            });
+        }
+
+        function gameOver(mensagemErro) {
+            esconderNPC();
+            tocarSomErro();
+            const tela = document.getElementById("tela-jogo");
+            tela.classList.add("tela-error");
+            document.getElementById("barra-status").innerHTML = "<span>[SISTEMA: CRÍTICO]</span><span>[FATAL ERROR]</span>";
+            
+            const textoFinal = "[CRITICAL ERROR 0x000F4]\n" + mensagemErro + "\n\nA TRANSMISSÃO FOI INTERROMPIDA.";
+            
+            atualizarTela(textoFinal, [
+                { texto: "Reiniciar Transmissão", funcao: reiniciarJogo }
+            ]);
+        }
+
+        function reiniciarJogo() {
+            inventario = [];
+            estadoJogo = {};
+            atualizarInventario();
+            const tela = document.getElementById("tela-jogo");
+            tela.classList.remove("tela-error");
+            document.getElementById("barra-status").innerHTML = "<span>[CONEXÃO: ESTÁVEL]</span><span id='capitulo-tag'>NEXT DAY - CAPÍTULO 1</span>";
+            iniciarJogo();
+        }
+
+        function iniciarJogoComSom() {
+            initAudio();
+            tocarSomClique();
+            iniciarJogo();
+        }
+
+        // =========================================================
+        // ================= CAPÍTULO 1 (EXPANDIDO) =================
+        // =========================================================
+        function iniciarJogo() {
+            document.getElementById("menu-principal").style.display = "none";
+            document.getElementById("tela-jogo").style.display = "block";
+            document.getElementById("capitulo-tag").innerText = "NEXT DAY - CAPÍTULO 1: DESPERTAR NAS SOMBRAS";
+            
+            mostrarDesconhecido();
+            
+            const texto = "Acordas com uma dor aguda na cabeça. As luzes de emergência do complexo subterrâneo piscam num tom vermelho fraco. À tua frente surge uma figura enigmática vestida num manto escuro.\n\nDesconhecido: 'Finalmente acordaste. O isolamento primário da instalação falhou. Se não restabelecermos o gerador secundário e os selos das portas, ficaremos presos aqui para sempre.'";
+            
+            atualizarTela(texto, [
+                { texto: "'Quem és tu e o que aconteceu aqui?'", funcao: c1_perguntarQuemE },
+                { texto: "'Qual é a situação das saídas do complexo?'", funcao: c1_perguntarSaidas },
+                { texto: "Examinar a sala médica em detalhe antes de responder", funcao: c1_examinarSalaMedica },
+                { texto: "Tentar levantar rapidamente e correr para o corredor", funcao: c1_correrImprudente }
+            ]);
+        }
+
+        function c1_perguntarQuemE() {
+            mostrarDesconhecido();
+            const texto = "Desconhecido: 'Eu era o engenheiro responsável pelo Setor B. Quando a anomalia começou, todos os protocolos foram corrompidos. Tens de te concentrar: a única forma de escapar do complexo é recuperar a chave de acesso do Gabinete de Controlo.'";
+            
+            atualizarTela(texto, [
+                { texto: "'Onde fica esse Gabinete de Controlo?'", funcao: c1_perguntarGabinete },
+                { texto: "Procurar nas mesas de ferramentas da sala", funcao: c1_procurarFerramentas },
+                { texto: "Perguntar sobre as criaturas no corredor", funcao: c1_perguntarCriaturas }
+            ]);
+        }
+
+        function c1_perguntarSaidas() {
+            mostrarDesconhecido();
+            const texto = "Desconhecido: 'Há três saídas principais: o Elevador de Carga, a Tubagem Central de Ar e a Passagem Subterrânea da Oficina. Todas estão bloqueadas por trancas eletrónicas ou falta de energia.'";
+            
+            atualizarTela(texto, [
+                { texto: "Decidir explorar a Rota do Elevador de Carga", funcao: c1_rotaElevador },
+                { texto: "Decidir explorar a Rota da Tubagem Central", funcao: c1_rotaTubagem },
+                { texto: "Decidir explorar a Rota da Oficina Técnica", funcao: c1_rotaOficina }
+            ]);
+        }
+
+        function c1_examinarSalaMedica() {
+            esconderNPC();
+            adicionarItem("Lanterna UV");
+            adicionarItem("Seringa Estéril");
+            const texto = "Procuras cuidadosamente entre as bancadas viradas. Encontras uma Lanterna UV funcional e uma Seringa Estéril num estojo blindado. O Desconhecido observa com atenção.";
+            
+            atualizarTela(texto, [
+                { texto: "Voltar a falar com o Desconhecido", funcao: c1_perguntarQuemE },
+                { texto: "Usar a Lanterna UV no chão da sala", funcao: c1_usarUV_SalaMedica }
+            ]);
+        }
+
+        function c1_usarUV_SalaMedica() {
+            esconderNPC();
+            const texto = "A iluminação ultravioleta revela símbolos luminescentes no pavimento que apontam para um painel falso atrás do armário de medicamentos.";
+            
+            atualizarTela(texto, [
+                { texto: "Mover o armário para examinar o painel", funcao: c1_painelFalsoSalaMedica },
+                { texto: "Ignorar o painel por agora e sair para o corredor", funcao: c1_corredorHUB }
+            ]);
+        }
+
+        function c1_painelFalsoSalaMedica() {
+            esconderNPC();
+            adicionarItem("Fusível de 20A");
+            const texto = "Atrás do armário encontras uma caixa de distribuição oculta. Retiras com cuidado um Fusível de 20A intacto!";
+            
+            atualizarTela(texto, [
+                { texto: "Avançar para o Corredor Central (HUB)", funcao: c1_corredorHUB }
+            ]);
+        }
+
+        function c1_perguntarGabinete() {
+            mostrarDesconhecido();
+            const texto = "Desconhecido: 'O Gabinete fica no fim do Corredor HUB. Mas a porta exige um Fusível de alta amperagem e um código alfanumérico.'";
+            
+            atualizarTela(texto, [
+                { texto: "Avançar para o Corredor Central (HUB)", funcao: c1_corredorHUB },
+                { texto: "Pedir ao Desconhecido que te acompanhe", funcao: c1_acompanharHUB }
+            ]);
+        }
+
+        function c1_perguntarCriaturas() {
+            mostrarDesconhecido();
+            const texto = "Desconhecido: 'Eles reagem ao som e à iluminação direta. Se vires alguma coisa no escuro, não corras de forma desordenada.'";
+            
+            atualizarTela(texto, [
+                { texto: "Avançar para o Corredor Central (HUB)", funcao: c1_corredorHUB }
+            ]);
+        }
+
+        function c1_procurarFerramentas() {
+            esconderNPC();
+            adicionarItem("Pé de Cabra");
+            const texto = "Encontras um Pé de Cabra pesado sobre uma bancada metálica. É perfeito para forçar portas emperradas.";
+            
+            atualizarTela(texto, [
+                { texto: "Avançar para o Corredor Central (HUB)", funcao: c1_corredorHUB }
+            ]);
+        }
+
+        function c1_acompanharHUB() {
+            mostrarDesconhecido();
+            const texto = "O Desconhecido acena com a cabeça e segue-te em silêncio. Chegam ao grande Corredor Central (HUB).";
+            
+            atualizarTela(texto, [
+                { texto: "Explorar a Ala de Servidores (Esquerda)", funcao: c1_alaServidores },
+                { texto: "Explorar a Oficina de Manutenção (Direita)", funcao: c1_rotaOficina },
+                { texto: "Exspecionar a Porta Principal do Gabinete (Centro)", funcao: c1_portaGabineteCentro }
+            ]);
+        }
+
+        function c1_corredorHUB() {
+            esconderNPC();
+            const texto = "Estás no Corredor Central (HUB). O chão está coberto de escombros e cabos de alta voltagem caídos. Há três caminhos principais visíveis.";
+            
+            atualizarTela(texto, [
+                { texto: "Entrar na Ala de Servidores (Esquerda)", funcao: c1_alaServidores },
+                { texto: "Entrar na Oficina de Manutenção (Direita)", funcao: c1_rotaOficina },
+                { texto: "Examinar a Porta Trancada do Gabinete (Frente)", funcao: c1_portaGabineteCentro }
+            ]);
+        }
+
+        function c1_alaServidores() {
+            esconderNPC();
+            const texto = "A Ala de Servidores está impregnada de fumo. Ecrãs piscam em ciclo continuo com a mensagem: 'SOBREPOSIÇÃO MESTRA NECESSÁRIA'. Há um rádio de emergência sobre o terminal central.";
+            
+            atualizarTela(texto, [
+                { texto: "Ligar o Rádio de Emergência para ouvir frequências", funcao: c1_ouvirRadio },
+                { texto: "Investigar as gavetas dos servidores", funcao: c1_gavetasServidores },
+                { texto: "Tentar hackear o terminal principal", funcao: c1_hackearTerminal }
+            ]);
+        }
+
+        function c1_ouvirRadio() {
+            esconderNPC();
+            adicionarItem("Frequência de Rádio (4092)");
+            const texto = "Uma voz cheia de estática repete: 'Aviso de contaminação! Frequência de emergência 4092. Código de sobreposição: 4092...'";
+            
+            atualizarTela(texto, [
+                { texto: "Digitar o código 4092 no Terminal", funcao: c1_terminalSucesso },
+                { texto: "Voltar ao Corredor Central (HUB)", funcao: c1_corredorHUB }
+            ]);
+        }
+
+        function c1_gavetasServidores() {
+            esconderNPC();
+            adicionarItem("Cartão de Acesso B1");
+            const texto = "Encontras um Cartão de Acesso B1 esquecido dentro de uma pasta técnica de documentos!";
+            
+            atualizarTela(texto, [
+                { texto: "Voltar ao Corredor Central (HUB)", funcao: c1_corredorHUB }
+            ]);
+        }
+
+        function c1_hackearTerminal() {
+            if (inventario.includes("Frequência de Rádio (4092)")) {
+                c1_terminalSucesso();
+            } else {
+                gameOver("TENTATIVA INVÁLIDA. O sistema de segurança detetou intrusão e libertou gás neurotóxico na Ala de Servidores.");
+            }
+        }
+
+        function c1_terminalSucesso() {
+            esconderNPC();
+            estadoJogo.terminalDesbloqueado = true;
+            const texto = "SISTEMA DESBLOQUEADO! A tela mostra que a energia do pátio exterior precisa de ser alimentada a partir da Oficina de Manutenção.";
+            
+            atualizarTela(texto, [
+                { texto: "Ir imediatamente para a Oficina de Manutenção", funcao: c1_rotaOficina },
+                { texto: "Voltar ao Corredor Central (HUB)", funcao: c1_corredorHUB }
+            ]);
+        }
+
+        function c1_rotaOficina() {
+            esconderNPC();
+            const texto = "Chegas à Oficina de Manutenção. Há um gerador a diesel desligado, uma caixa de disjuntores aberta e um elevador de carga no fundo da sala.";
+            
+            let opcoes = [];
+            
+            if (inventario.includes("Fusível de 20A")) {
+                opcoes.push({ texto: "Inserir o Fusível de 20A na Caixa de Disjuntores", funcao: c1_inserirFusivel });
+            } else {
+                opcoes.push({ texto: "Exspecionar a Caixa de Disjuntores (Falta um Fusível)", funcao: c1_verDisjuntorSemFusivel });
+            }
+
+            if (inventario.includes("Pé de Cabra")) {
+                opcoes.push({ texto: "Usar o Pé de Cabra para forçar a comporta do Elevador", funcao: c1_forcarElevador });
+            }
+
+            opcoes.push({ texto: "Procurar combustível para o Gerador", funcao: c1_procurarCombustivel });
+            opcoes.push({ texto: "Voltar ao Corredor Central (HUB)", funcao: c1_corredorHUB });
+
+            atualizarTela(texto, opcoes);
+        }
+
+        function c1_verDisjuntorSemFusivel() {
+            esconderNPC();
+            const texto = "A caixa precisa de um Fusível de 20A para restabelecer a energia dos comandos elétricos. Tens de encontrar um na Ala Médica ou nos Servidores.";
+            
+            atualizarTela(texto, [
+                { texto: "Voltar ao Corredor Central (HUB)", funcao: c1_corredorHUB }
+            ]);
+        }
+
+        function c1_inserirFusivel() {
+            esconderNPC();
+            removerItem("Fusível de 20A");
+            estadoJogo.energiaAtiva = true;
+            const texto = "Encaixas o Fusível de 20A! Os painéis ganham vida e uma luz verde acende por cima do portal de acesso ao pátio exterior!";
+            
+            atualizarTela(texto, [
+                { texto: "Avançar pela porta principal desbloqueada em direção ao pátio", funcao: transicaoParaCapitulo2 }
+            ]);
+        }
+
+        function c1_procurarCombustivel() {
+            esconderNPC();
+            adicionarItem("Galão de Diesel");
+            const texto = "Encontras um Galão de Diesel num canto escuro da oficina atrás de uns tambores metálicos.";
+            
+            atualizarTela(texto, [
+                { texto: "Ligar o Gerador a Diesel", funcao: c1_ligarGeradorDiesel }
+            ]);
+        }
+
+        function c1_ligarGeradorDiesel() {
+            esconderNPC();
+            if (inventario.includes("Galão de Diesel")) {
+                removerItem("Galão de Diesel");
+                estadoJogo.geradorAtivo = true;
+                const texto = "Despejas o combustível e ligas o gerador! O motor ronca alto, iluminando todo o setor subterrâneo.";
+                
+                atualizarTela(texto, [
+                    { texto: "Seguir pelo corredor iluminado em direção ao Pátio Exterior", funcao: transicaoParaCapitulo2 }
+                ]);
+            } else {
+                gameOver("SEM COMBUSTÍVEL. Forçaste a ignição a seco e geraste uma faísca que inflamou o gás da sala.");
+            }
+        }
+
+        function c1_forcarElevador() {
+            esconderNPC();
+            const texto = "Usas o Pé de Cabra com toda a força! A comporta do elevador abre-se, revelando um túnel de serviço direto para a superfície.";
+            
+            atualizarTela(texto, [
+                { texto: "Subir pelo túnel de serviço para a superfície", funcao: transicaoParaCapitulo2 }
+            ]);
+        }
+
+        function c1_rotaElevador() {
+            esconderNPC();
+            const texto = "Na zona do Elevador de Carga, uma criatura enorme vaga lentamente entre a maquinaria. Ela é cega, mas reage a sons metálicos.";
+            
+            atualizarTela(texto, [
+                { texto: "Atirar uma lata para o canto oposto para distrair a criatura", funcao: c1_distrairCriaturaElevador },
+                { texto: "Tentar passar agachado sem fazer qualquer barulho", funcao: c1_passarSilencioElevador },
+                { texto: "Tentar atacar a criatura diretamente com o Pé de Cabra", funcao: c1_atacarCriatura }
+            ]);
+        }
+
+        function c1_distrairCriaturaElevador() {
+            esconderNPC();
+            const texto = "Lanças uma lata metálica! A criatura corre em disparada na direção do som. O caminho para as escadas de emergência fica completamente livre.";
+            
+            atualizarTela(texto, [
+                { texto: "Subir correndo pelas escadas de emergência rumo ao Pátio", funcao: transicaoParaCapitulo2 }
+            ]);
+        }
+
+        function c1_passarSilencioElevador() {
+            esconderNPC();
+            const texto = "Avanças passo a passo. O teu pé pisa num pedaço de vidro partido! O estalo ecoa por todo o corredor.";
+            
+            atualizarTela(texto, [
+                { texto: "Usar a Lanterna UV nos olhos da criatura", funcao: c1_usarUVCriatura },
+                { texto: "Correr desesperadamente para a porta de emergência", funcao: c1_correrImprudente }
+            ]);
+        }
+
+        function c1_usarUVCriatura() {
+            if (inventario.includes("Lanterna UV")) {
+                esconderNPC();
+                const texto = "A iluminação ultravioleta desorienta temporariamente a criatura! Consegues fechar a porta blindada atrás de ti.";
+                
+                atualizarTela(texto, [
+                    { texto: "Subir para a superfície", funcao: transicaoParaCapitulo2 }
+                ]);
+            } else {
+                gameOver("SEM EQUIPAMENTO. Não tinhas a lanterna UV para cegar a criatura e foste apanhado.");
+            }
+        }
+
+        function c1_rotaTubagem() {
+            esconderNPC();
+            const texto = "Entras pela Tubagem de Ar. A estrutura metálica rang e estala acima de uma queda vertical perigosa.";
+            
+            atualizarTela(texto, [
+                { texto: "Avançar devagar distribuindo o peso do corpo", funcao: c1_tubagemSucesso },
+                { texto: "Apressar o passo para sair rapidamente do duto", funcao: c1_tubagemQueda }
+            ]);
+        }
+
+        function c1_tubagemSucesso() {
+            esconderNPC();
+            const texto = "Navegas com sucesso pela tubagem até encontrar uma grelha de saída que dá diretamente para o Pátio Principal!";
+            
+            atualizarTela(texto, [
+                { texto: "Empurrar a grelha e sair para o pátio exterior", funcao: transicaoParaCapitulo2 }
+            ]);
+        }
+
+        function c1_portaGabineteCentro() {
+            esconderNPC();
+            if (estadoJogo.energiaAtiva || estadoJogo.geradorAtivo) {
+                const texto = "Com a energia restabelecida, a porta do Gabinete de Controlo abre-se automaticamente!";
+                atualizarTela(texto, [
+                    { texto: "Atravessar o Gabinete e sair para o Pátio Exterior", funcao: transicaoParaCapitulo2 }
+                ]);
+            } else {
+                const texto = "A porta está sem energia elétrica. Precisas de ativar a energia na Oficina de Manutenção ou encontrar uma rota alternativa.";
+                atualizarTela(texto, [
+                    { texto: "Voltar ao Corredor Central (HUB)", funcao: c1_corredorHUB }
+                ]);
+            }
+        }
+
+        // ================= ERROS CAPÍTULO 1 =================
+        function c1_correrImprudente() { gameOver("MOVIMENTO IMPRUDENTE. Fizeste demasiado ruído no corredor e atraíste múltiplos predadores das sombras."); }
+        function c1_atacarCriatura() { gameOver("CONFRONTO DIRETO FALHADO. A força física da criatura superou a tua defesa."); }
+        function c1_tubagemQueda() { gameOver("QUEDA FATAL. O duto de ventilação cedeu com a pressa e caíste no fosso do triturador."); }
+
+        // ================= TRANSICÃO CAPÍTULO 2 =================
+        function transicaoParaCapitulo2() {
+            esconderNPC();
+            document.getElementById("capitulo-tag").innerText = "NEXT DAY - CAPÍTULO 2: O PÁTIO DO ESQUISITO";
+            c2_inicio();
+        }
+
+        // =========================================================
+        // ================= CAPÍTULO 2 (EXPANDIDO) =================
+        // =========================================================
+        function c2_inicio() {
+            esconderNPC();
+            const texto = "Consegues finalmente alcançar a superfície do pátio exterior do complexo! O ar está frio e coberto por uma neblina densa. No horizonte, os portões gigantescos da cidade estão trancados por correntes grossas e um sistema digital blindado.\n\nBem no centro do pátio, destacado sob um holofote que falha, encontra-se uma figura peculiar e imponente: o Esquisito. Ele está totalmente imóvel, com os olhos situados de forma bizarra na parte superior da cabeça.";
+            
+            atualizarTela(texto, [
+                { texto: "Aproximar-te diretamente do Esquisito", funcao: c2_aproximarEsquisito },
+                { texto: "Explorar a Guarita de Vigilância à esquerda", funcao: c2_guaritaVigilancia },
+                { texto: "Investigar a Depósito de Cargas à direita", funcao: c2_depositoCargas },
+                { texto: "Exspecionar o Terminal Principal do Portão da Cidade", funcao: c2_terminalPortao }
+            ]);
+        }
+
+        function c2_aproximarEsquisito() {
+            mostrarEsquisito();
+            const texto = "Aproximas-te com cautela. O Esquisito vira a cabeça de forma mecânica. A sua presença emite uma aura de autoridade estranha e incompreensível.\n\nEsquisito: '...'";
+            
+            atualizarTela(texto, [
+                { texto: "Tentar comunicar: 'Sabes como abrir o portão da cidade?'", funcao: c2_falarEsquisitoPortao },
+                { texto: "Dizer a palavra de ordem: 'NA!'", funcao: c2_falarEsquisitoNA },
+                { texto: "Mostra-lhe os itens da tua mochila", funcao: c2_mostrarItensEsquisito },
+                { texto: "Tentar dar-lhe a volta para passar sem falar", funcao: c2_passarPorTrasEsquisito }
+            ]);
+        }
+
+        function c2_falarEsquisitoPortao() {
+            mostrarEsquisito();
+            const texto = "O Esquisito não pisca os olhos no topo da cabeça. Ele ergue o braço devagar e aponta diretamente para o painel de código do portão principal, em seguida abana a cabeça.\n\nEsquisito: 'NA!'";
+            
+            atualizarTela(texto, [
+                { texto: "Responder enfaticamente: 'NA!'", funcao: c2_falarEsquisitoNA },
+                { texto: "Ir investigar o painel onde ele apontou", funcao: c2_terminalPortao }
+            ]);
+        }
+
+        function c2_falarEsquisitoNA() {
+            mostrarEsquisito();
+            adicionarItem("Cartão Mestre do Esquisito");
+            const texto = "Ao escutar o teu 'NA!', a expressão do Esquisito muda completamente! Ele acena formalmente em sinal de absoluto respeito e retira do seu casaco o Cartão Mestre do Portão!";
+            
+            atualizarTela(texto, [
+                { texto: "Agradecer e aceitar o Cartão Mestre", funcao: c2_aceitarCartaoEsquisito },
+                { texto: "Perguntar ao Esquisito se ele quer fugir da cidade contigo", funcao: c2_convidarEsquisito }
+            ]);
+        }
+
+        function c2_aceitarCartaoEsquisito() {
+            mostrarEsquisito();
+            const texto = "Seguras o Cartão Mestre nas mãos. O Esquisito aponta para a consola do Portão da Cidade com uma reverência silenciosa.";
+            
+            atualizarTela(texto, [
+                { texto: "Ir para o Portão da Cidade e desbloquear a passagem", funcao: final_vitoriaCartaoEsquisito }
+            ]);
+        }
+
+        function c2_convidarEsquisito() {
+            mostrarEsquisito();
+            const texto = "O Esquisito acena positivamente com a cabeça de forma solene. Ele junta-se a ti como teu companheiro para a jornada fora dos muros da cidade!";
+            
+            atualizarTela(texto, [
+                { texto: "Usar o Cartão Mestre e abrir o portão para ambos", funcao: final_vitoriaParceriaEsquisito }
+            ]);
+        }
+
+        function c2_mostrarItensEsquisito() {
+            mostrarEsquisito();
+            if (inventario.length > 0) {
+                const texto = "Mostras o conteúdo da tua mochila. O Esquisito observa atentamente cada item, mas parece interessado sobretudo na tua determinação em avançar.";
+                atualizarTela(texto, [
+                    { texto: "Dizer a palavra de ordem: 'NA!'", funcao: c2_falarEsquisitoNA },
+                    { texto: "Voltar a focar no Portão da Cidade", funcao: c2_terminalPortao }
+                ]);
+            } else {
+                const texto = "A tua mochila está completamente vazia. O Esquisito continua a encarar-te em silêncio.";
+                atualizarTela(texto, [
+                    { texto: "Dizer a palavra de ordem: 'NA!'", funcao: c2_falarEsquisitoNA }
+                ]);
+            }
+        }
+
+        function c2_passarPorTrasEsquisito() {
+            gameOver("DISTÂNCIA DE SEGURANÇA VIOLADA. O campo de força gravitacional do Esquisito ativou-se automaticamente e repeliu-te com força extrema.");
+        }
+
+        function c2_guaritaVigilancia() {
+            esconderNPC();
+            const texto = "Entras na Guarita de Vigilância do Pátio. Nos monitores estáticos é possível ver as câmaras do perímetro. Na secretária há um diário de bordo aberto e uma chave metálica.";
+            
+            atualizarTela(texto, [
+                { texto: "Ler o Diário de Bordo do Guarda", funcao: c2_lerDiarioGuarda },
+                { texto: "Pegar na Chave Metálica do Depósito", funcao: c2_pegarChaveDeposito },
+                { texto: "Sair da Guarita e voltar ao Pátio", funcao: c2_inicio }
+            ]);
+        }
+
+        function c2_lerDiarioGuarda() {
+            esconderNPC();
+            adicionarItem("Pista do Diário ('NA')");
+            const texto = "O diário regista: 'Dia 42: O sujeito do centro do pátio (o Esquisito) é a chave de tudo. Quem souber a senha 'NA' consegue autorização mestre do perímetro...'";
+            
+            atualizarTela(texto, [
+                { texto: "Voltar para junto do Esquisito", funcao: c2_aproximarEsquisito },
+                { texto: "Voltar ao Pátio Central", funcao: c2_inicio }
+            ]);
+        }
+
+        function c2_pegarChaveDeposito() {
+            esconderNPC();
+            adicionarItem("Chave do Depósito");
+            const texto = "Guardas a Chave do Depósito na tua mochila.";
+            
+            atualizarTela(texto, [
+                { texto: "Ir para o Depósito de Cargas", funcao: c2_depositoCargas },
+                { texto: "Voltar ao Pátio Central", funcao: c2_inicio }
+            ]);
+        }
+
+        function c2_depositoCargas() {
+            esconderNPC();
+            const texto = "O Depósito de Cargas contém caixas industriais seladas. A porta de entrada está fechada com um alfinete de alta segurança.";
+            
+            let opcoes = [];
+            
+            if (inventario.includes("Chave do Depósito")) {
+                opcoes.push({ texto: "Usar a Chave do Depósito para abrir o galpão", funcao: c2_abrirGalpaoComChave });
+            }
+
+            if (inventario.includes("Pé de Cabra")) {
+                opcoes.push({ texto: "Usar o Pé de Cabra para forçar a fechadura", funcao: c2_forcarGalpao });
+            }
+
+            opcoes.push({ texto: "Voltar ao Pátio Central", funcao: c2_inicio });
+
+            atualizarTela(texto, opcoes);
+        }
+
+        function c2_abrirGalpaoComChave() {
+            esconderNPC();
+            adicionarItem("Bateria Industrial");
+            const texto = "A porta abre-se sem esforço! No interior do depósito encontras uma Bateria Industrial cheia de carga.";
+            
+            atualizarTela(texto, [
+                { texto: "Voltar ao Pátio e ir ao Terminal do Portão", funcao: c2_terminalPortao }
+            ]);
+        }
+
+        function c2_forcarGalpao() {
+            esconderNPC();
+            adicionarItem("Bateria Industrial");
+            const texto = "Forças a porta com o Pé de Cabra! Encontras uma Bateria Industrial pronta a ser usada.";
+            
+            atualizarTela(texto, [
+                { texto: "Voltar ao Pátio e ir ao Terminal do Portão", funcao: c2_terminalPortao }
+            ]);
+        }
+
+        function c2_terminalPortao() {
+            esconderNPC();
+            const texto = "Te encontras diante do Terminal do Portão Principal da Cidade. A tela exibe três opções de desbloqueio:";
+            
+            let opcoes = [];
+
+            if (inventario.includes("Cartão Mestre do Esquisito")) {
+                opcoes.push({ texto: "Inserir o Cartão Mestre do Esquisito", funcao: final_vitoriaCartaoEsquisito });
+            }
+
+            opcoes.push({ texto: "Digitar a palavra de passe no teclado do terminal", funcao: c2_tecladoTerminal });
+
+            if (inventario.includes("Bateria Industrial")) {
+                opcoes.push({ texto: "Conectar a Bateria Industrial para forçar abertura de emergência", funcao: final_vitoriaBateria });
+            }
+
+            opcoes.push({ texto: "Voltar ao Pátio Central", funcao: c2_inicio });
+
+            atualizarTela(texto, opcoes);
+        }
+
+        function c2_tecladoTerminal() {
+            esconderNPC();
+            const texto = "O teclado pede a palavra-chave de confirmação de protocolo:";
+            
+            atualizarTela(texto, [
+                { texto: "Digitar 'NA'", funcao: final_vitoriaCodigoNA },
+                { texto: "Digitar '4092'", funcao: c2_erroCodigoExpired },
+                { texto: "Digitar 'ESQUISITO'", funcao: c2_erroNome }
+            ]);
+        }
+
+        function c2_erroCodigoExpired() { gameOver("CÓDIGO INCORRETO. A tentativa falhada bloqueou o terminal e acionou as metralhadoras automáticas."); }
+        function c2_erroNome() { gameOver("PALAVRA INCORRETA. Protocolo de segurança ativado."); }
+
+        // ================= FINAI DO JOGO =================
+        function exibirVitoria(mensagem) {
+            esconderNPC();
+            tocarSomVitoria();
+            document.getElementById("caixa-texto").innerText = mensagem;
+            const caixaOpcoes = document.getElementById("caixa-opcoes");
+            caixaOpcoes.innerHTML = "";
+            const btn = document.createElement("button");
+            btn.innerText = "Jogar Novamente";
+            btn.onmouseenter = tocarSomHover;
+            btn.onclick = () => {
+                tocarSomClique();
+                reiniciarJogo();
+            };
+            caixaOpcoes.appendChild(btn);
+        }
+
+        function final_vitoriaCartaoEsquisito() {
+            exhibirVitoria("Inseres o Cartão Mestre do Esquisito no terminal. Os grandes portões metálicos abrem-se de par em par com um estrondo monumental! Atravessas a fronteira da cidade e conquistas a liberdade!\n\nFINAL CONCLUÍDO: A CHAVE DO ESQUISITO!");
+        }
+
+        function final_vitoriaParceriaEsquisito() {
+            exibirVitoria("Juntamente com o Esquisito, ativas o mecanismo do portão principal. Vocês dois deixam a cidade em ruínas para trás e seguem viagem pelo novo mundo!\n\nFINAL ESPECIAL: A ALIANÇA COM O ESQUISITO!");
+        }
+
+        function final_vitoriaCodigoNA() {
+            exibirVitoria("Digitas 'NA' na consola do terminal. O sistema valida imediatamente as tuas credenciais e recolhe os portões blindados!\n\nFINAL VERDADEIRO: SOBREVIVENTE DE NEXT DAY!");
+        }
+
+        function final_vitoriaBateria() {
+            exibirVitoria("Conectas a Bateria Industrial diretamente na solenoide de emergência! Uma descarga intensa força a abertura do portão e consegues escapar a tempo!\n\nFINAL ALTERNATIVO: FUGA DE EMERGÊNCIA!");
+        }
+    </script>
+</body>
+</html>
